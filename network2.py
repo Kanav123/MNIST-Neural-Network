@@ -60,6 +60,7 @@ class Network(object):
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
             lmbda = 0.0,
+            early_stop_param = 10,
             evaluation_data=None,
             monitor_evaluation_cost=False,
             monitor_evaluation_accuracy=False,
@@ -70,6 +71,7 @@ class Network(object):
         n = len(training_data)
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
+        num_check , best_accuracy = 0,0
         for j in xrange(epochs):
             random.shuffle(training_data)
             mini_batches = [
@@ -95,8 +97,18 @@ class Network(object):
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
+                if accuracy > best_accuracy or j == 0:
+                    num_check = 0
+                    best_accuracy = accuracy
+                else:
+                    num_check += 1
                 print "Accuracy on evaluation data: {} / {}".format(
                     self.accuracy(evaluation_data), n_data)
+                print "Best accuracy till now is: {}".format(best_accuracy)
+                if num_check == early_stop_param:
+                    print "Stopped due to early stopping criteria"
+                    return evaluation_cost, evaluation_accuracy, \
+                        training_cost, training_accuracy
             print
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
