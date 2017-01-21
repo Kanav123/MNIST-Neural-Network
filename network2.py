@@ -61,6 +61,7 @@ class Network(object):
     def SGD(self, training_data, epochs, mini_batch_size, eta,
             lmbda = 0.0,
             early_stop_param = 10,
+            momentum = 0,
             use_learning_rule = False,
             evaluation_data=None,
             monitor_evaluation_cost=False,
@@ -81,7 +82,7 @@ class Network(object):
                 for k in xrange(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(
-                    mini_batch, eta, lmbda, len(training_data))
+                    mini_batch, eta, lmbda, len(training_data),momentum)
             print "Epoch %s training complete" % j
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
@@ -123,17 +124,23 @@ class Network(object):
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
 
-    def update_mini_batch(self, mini_batch, eta, lmbda, n):
+    def update_mini_batch(self, mini_batch, eta, lmbda, n, momentum):
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         for x, y in mini_batch:
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
-                        for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b-(eta/len(mini_batch))*nb
-                       for b, nb in zip(self.biases, nabla_b)]
+
+        vel_w = [np.zeros(w.shape) for w in self.weights]
+        vel_b = [np.zeros(b.shape) for b in self.biases]
+        vel_w = [(momentum*v) - (eta/len(mini_batch))*nw
+                    for v, nw in zip(vel_w, nabla_w)]
+        vel_b = [(momentum*v) - (eta/len(mini_batch))*nb
+                    for v, nb in zip(vel_b, nabla_b)]
+        self.weights = [(v + (1- eta*(lmbda/n))*w)
+                            for w ,v in zip(self.weights, vel_w)]
+        self.biases = [(b + v) for b, v in zip(self.biases, vel_b)]
 
     def backprop(self, x, y):
         nabla_b = [np.zeros(b.shape) for b in self.biases]
